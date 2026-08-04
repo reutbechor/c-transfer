@@ -2,3 +2,5 @@ build/
 .vscode/
 *.o
 *.out
+received.txt
+test.txt
