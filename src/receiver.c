@@ -19,6 +19,9 @@ int main(void)
     socklen_t client_address_length = sizeof(client_address);
 
     char buffer[BUFFER_SIZE];
+    ssize_t bytes_received;
+
+    FILE *output_file;
 
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -67,24 +70,48 @@ int main(void)
         inet_ntoa(client_address.sin_addr)
     );
 
-    ssize_t bytes_received = recv(
-        client_socket,
-        buffer,
-        BUFFER_SIZE - 1,
-        0
-    );
+    output_file = fopen("received.txt", "wb");
 
-    if (bytes_received == -1) {
-        perror("recv");
+    if (output_file == NULL) {
+        perror("fopen");
         close(client_socket);
         close(server_socket);
         return EXIT_FAILURE;
     }
 
-    buffer[bytes_received] = '\0';
+    while ((bytes_received = recv(
+                client_socket,
+                buffer,
+                sizeof(buffer),
+                0)) > 0) {
 
-    printf("Received message: %s\n", buffer);
+        size_t bytes_written = fwrite(
+            buffer,
+            1,
+            bytes_received,
+            output_file
+        );
 
+        if (bytes_written != (size_t)bytes_received) {
+            perror("fwrite");
+            fclose(output_file);
+            close(client_socket);
+            close(server_socket);
+            return EXIT_FAILURE;
+        }
+    }
+
+    if (bytes_received == -1) {
+        perror("recv");
+        fclose(output_file);
+        close(client_socket);
+        close(server_socket);
+        return EXIT_FAILURE;
+    }
+
+    printf("File received successfully\n");
+
+    fclose(output_file);
     close(client_socket);
     close(server_socket);
 
